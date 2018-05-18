@@ -1,0 +1,7 @@
+#Fabio's Kozai Code
+
+set initial conditions in file "input"; units are M_Sun, AU, G=1
+compile: gfortran -o LKspin LKspin.f
+output vectors are in "out.dat"
+
+The code is free to use, provided that Antonini et al. (https://arxiv.org/abs/1711.07142) and Rodriguez and Antonini are cited.

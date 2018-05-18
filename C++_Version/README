@@ -1,0 +1,25 @@
+# Carl's Kozai Code
+
+For integrating the secular equations of motions for the three-body problem, 
+including the quadrupole and octupole terms (see Tremaine+2009, Petrovich2015 and Liu+2015)
+
+Also includes relativistic terms for the inner binary, including:  
+	1pN Pericenter precession (ala Ford+2000)  
+	Gravitational Wave emission (ala Blaes+2002)  
+	Spin-Orbit coupling (ala Rodriguez and Antonini 2018, identical Barker and O'Connell 1975)  
+	Spin-Spin coupling (same)  
+  
+You are welcome to use either code in any way you like, though we ask that if you
+use any results from it in a paper that you cite Rodriguez and Antonini (2018)
+and Antonini et al (2017, https://arxiv.org/abs/1711.07142) 
+
+The code can be compiled with:
+	g++ -o kozai kozai.C -lgsl -lgslcblas -O3
+Then run ./kozai --help for a list of options.
+
+The default triple, when integrated with all the physics, i.e. 
+	./kozai --quad --oct --peri --rad 
+should recreate the left-hand panel of Figure 2 from Rodriguez and Antonini 2018
+
+Finally, top-level information about the system is printed to stdout,
+while the actual integration is printed to stderr
