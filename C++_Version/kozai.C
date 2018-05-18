@@ -83,8 +83,6 @@ int main(int argc, char **argv){
 	bool failure=false;
 	bool IGNORE_GSL_ERRORS=false;
 	bool TENhz_ecc=false;
-	bool low_ecc1=false;
-	bool low_ecc2=false;
 	bool TENhz_circ=false;
 	double t=tmin;
 	double t_insp;
@@ -145,19 +143,6 @@ int main(int argc, char **argv){
 			if (kozai->get_ecc1() > max_e)
 				max_e = kozai->get_ecc1();
 			
-			//check for hitting the LISA band
-			if(kozai->gwave_freq() > 1e-2 && low_ecc1 == false){
-				low_ecc1 = true;
-				cout << "LISA band (0.01 Hz, eccentric): ";
-				print_state(t,kozai,cout);
-			}
-
-			if(kozai->gwave_freq() > 1e-1 && low_ecc2 == false){
-				low_ecc2 = true;
-				cout << "LISA band (0.1 Hz, eccentric): ";
-				print_state(t,kozai,cout);
-			}
-
 			//check for hitting the LIGO band
 			if(kozai->gwave_freq() > 10 && TENhz_ecc == false){
 				TENhz_ecc = true;
