@@ -10,8 +10,8 @@ Also includes relativistic terms for the inner binary, including:
 	Spin-Spin coupling (same)  
   
 You are welcome to use either code in any way you like, though we ask that if you
-use any results from it in a paper that you cite Rodriguez and Antonini (2018)
-and Antonini et al (2017, https://arxiv.org/abs/1711.07142) 
+use any results from it in a paper that you cite Rodriguez and Antonini (2018, 
+https://arxiv.org/abs/1805.08212) and Antonini et al (2017, https://arxiv.org/abs/1711.07142) 
 
 The code can be compiled with:
 	g++ -o kozai kozai.C -lgsl -lgslcblas -O3
