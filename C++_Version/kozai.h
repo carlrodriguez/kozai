@@ -112,8 +112,6 @@ class kozai_struct
 		bool quadrupole;
 		bool octupole;
 		bool pericenter;
-		bool outerpericenter;
-		bool interaction;
 		bool spinorbit;
 		bool spinspin;
 		bool radiation;
@@ -137,7 +135,7 @@ class kozai_struct
 			  double ig1=199.31831, double ig2=237.15944, double im1=24.22645, double im2=14.999986, double im3=21.509239,
 			  double iOmega1=321.97666, double iOmega2=141.97666, double ir1=0, double ir2=0,  double ichi1=1, double ichi2=1,
 			  double itheta1=0, double itheta2=0, double iphi1=0, double iphi2=0,
-			  bool iquad=false, bool ioct=false, bool iperi=false, bool iouterperi=false, bool iinteract=false, bool iso=false, bool iss=false, bool rad=false)
+			  bool iquad=false, bool ioct=false, bool iperi=false, bool iso=false, bool iss=false, bool rad=false)
 			{	
 				a1=ia1*AU;
 				a2=ia2*AU;
@@ -162,8 +160,6 @@ class kozai_struct
 				quadrupole=iquad;
 				octupole=ioct;
 				pericenter=iperi;
-				outerpericenter=iouterperi;
-				interaction=iinteract;
 				spinorbit=iso;
 				spinspin=iss;
 				radiation=rad;
@@ -199,21 +195,15 @@ class kozai_struct
 			//NOTE: this means we're in a coordinate system where z-hat points
 			//towards to total system angular momentum (before radiation
 			//reaction)
-      		//HBLIM: |j_hat| * sqrt(G M a)
-			double ia = L1_no_a*sqrt(a1*(1-sqr(e1))); 
+			double ia = L1_no_a*sqrt(a1*(1-sqr(e1)));
 			double oa = L2*sqrt(1-sqr(e2));
 
 
-      		//HBLIM: Ignores contributions from spins to total angular mom
 			double total_ang = sqrt(sqr(ia)+sqr(oa)+2*ia*oa*cos(inc));
-
-      		//HBLIM: Find angle of j1, j2 wrt to invariable plane
 			double inc1 = acos((ia + oa*cos(inc))/total_ang);
 			double inc2 = acos((oa + ia*cos(inc))/total_ang);
 
 			//Define the actual vectors
-      		//HBLIM: Writing out n1_hat, n2_hat wrt to invariable plane
-      		//HBLIM: Murray Dermott Fig 2.13
 			j1_init = sqrt(1 - sqr(e1)) * vec(sin(inc1) * sin(Omega1), -sin(inc1) * cos(Omega1), cos(inc1));
 			j2_init = sqrt(1 - sqr(e2)) * vec(sin(inc2) * sin(Omega2), -sin(inc2) * cos(Omega2), cos(inc2));
 			e1_init = e1 * vec(cos(g1)*cos(Omega1) - sin(g1)*cos(inc1)*sin(Omega1),
@@ -223,12 +213,8 @@ class kozai_struct
 					cos(g2)*sin(Omega2) + sin(g2)*cos(inc2)*cos(Omega2),
 					sin(g2)*sin(inc2));
 
-	  		cout << "j1_init = (" << j1_init[0] << "," << j1_init[1] << "," << j1_init[2] << ")" << endl;
-			cout << "j2_init = (" << j2_init[0] << "," << j2_init[1] << "," << j2_init[2] << ")" << endl;
-
 			//Also define the spin vectors (originally parallel to j1, then
 			//rotate down to the specified intial orientation)
-      		//HBLIM: "Rodrigues" rotation formula
 			s1_init =  m1*m1*(G/c)*chi1*j1_init / abs(j1_init);
 			s2_init = m2*m2*(G/c)*chi2*j1_init / abs(j1_init);
 
@@ -267,113 +253,22 @@ class kozai_struct
 		void set_ecc1(double e1_i) {e1=e1_i;}
 		double get_ecc1() {return abs(this->get_e1());}
 
-        void get_exy(double omega1, double inc1, double g1, double& ex, double& ey, double& ez) {
-        	ex = cos(g1)*cos(omega1) - sin(g1)*cos(inc1)*sin(omega1);
-        	ey = cos(g1)*sin(omega1) + sin(g1)*cos(inc1)*cos(omega1);
-        	ez = sin(g1)*sin(inc1);
-        }
-
 		void set_g1(double g1_i) {g1=g1_i;}
-    	//HBLIM: LML Equation 23
-
-		// double get_g1() {
-		// 	double g1_0 = asin(this->get_e1()[2] / (sin(this->get_inc1())) / this->get_ecc1());
-
-		// 	double extrue = this->get_e1()[0] / this->get_ecc1();
-		// 	double eytrue = this->get_e1()[1] / this->get_ecc1();
-		// 	double eztrue = this->get_e1()[2] / this->get_ecc1();
-		// 	if ( (abs(this->get_inc1())*180./PI < 5.) || (abs(this->get_inc1() - 180.)*180./PI < 5.) ) {
-		// 		g1_0 = acos(extrue*cos(this->get_Omega1()) + eytrue*sin(this->get_Omega1()));
-		// 	}
-		// 	//double g1 = g1_0;
-			
-		// 	double testgs[4];
-		// 	if (g1_0 > 0) {
-		// 		testgs[0] = g1_0;
-		// 		testgs[1] = PI-g1_0;
-		// 		testgs[2] =  g1_0 + PI;
-		// 		testgs[3] = TWOPI - g1_0;
-		// 	}
-		// 	else if(g1_0 < 0) {
-		// 		testgs[0] = -1.0 *g1_0;
-		// 		testgs[1] = PI+g1_0;
-		// 		testgs[2] = PI - g1_0;
-		// 		testgs[3] = TWOPI + g1_0;
-		// 	}
-
-		// 	double g1 = g1_0;
-		// 	double ex = 0., ey = 0., ez = 0.;
-
-
-		// 	for(int ii=0;ii < 4; ii += 1) {
-		// 		get_exy(this->get_Omega1(),this->get_inc1(),testgs[ii],ex,ey,ez);
-		// 		if ( (abs(extrue-ex) < 1e-8) and (abs(eytrue-ey) < 1e-8) and (abs(eztrue-ez) < 1e-8)) {
-		// 			return testgs[ii];
-		// 		}
-		// 	}
-		// 	/*	
-  //     		//HBLIM: applies for g1 in 2nd, 3rd quadrants
-		// 	if((this->get_e1()^this->get_j1())[2] > 0) g1 = PI - g1;
-  //     		//HBLIM: applies for g1 in 4th quadrant
-		// 	if(g1 < 0) g1 += TWOPI; // need to put the angle in the right quadrant
-		// 	//g1 = atan2(this->get_e1()[1],this->get_e1()[0]);
-		// 	return g1;
-		// 	*/
-		// 	return false;
-		// }
-   //      double get_g1() {
-   //          double gg1 = asin(this->get_e1()[2] / (sin(this->get_inc1())) / this->get_ecc1());
-   //          double arg = this->get_e1()[2] / (sin(this->get_inc1())) / this->get_ecc1();
-   //          //HBLIM: If inc1 = 0, then re-define g1 wrt to fixed X-direction! Otherwise definition diverges
-			// if(this->get_inc1() == 0.) { gg1 = acos(this->get_e1()[0] / this->get_ecc1()); }
-
-   //          //if((this->get_e1()^this->get_j1())[2] > 0) gg1 = PI - gg1;
-   //          if(gg1 < 0) gg1 += TWOPI; // need to put the angle in the right quadrant
-
-   //          if(isnan(gg1)) {
-
-	  //   		streamsize ss = cout.precision();
-			// 	cout << setprecision(10);
-			// 	cout << "bad arg = " << arg << endl;
-			// 	cout << setprecision(ss);
-   //          }
-   //          //cout << "(inc1, e1, e1z, gg1, e1xj1_z) = (" << this->get_inc1() << ", " << this->get_ecc1() << ", " << this->get_e1()[2] << ", " << gg1 << ", " << (this->get_e1()^this->get_j1())[2] << ")" << endl;
-            
-   //          return gg1;
-   //      }
-		// double get_g1() {
-		// 	double arg = this->get_e1()[2] / (sin(this->get_inc1())) / this->get_ecc1();
-		// 	double g1 = asin(this->get_e1()[2] / (sin(this->get_inc1())) / this->get_ecc1());
-		// 	if((this->get_e1()^this->get_j1())[2] > 0) g1 = PI - g1;
-		// 	if(g1 < 0) g1 += TWOPI; // need to put the angle in the right quadrant
-		// 	if (arg > 1) g1 = PI/2;
-		// 	if (arg < 1) g1 = -PI/2;
-		// 	if(isnan(g1)) {
-		// 		streamsize ss = cout.precision();
-		// 		cout << setprecision(10);
-		// 		cout << "set_g1() Error: Bad Argument = " << arg << "," << this->get_ecc1() << endl;
-  //           }
-		// 	return g1;
-		// }
-
 		double get_g1() {
 			double g1 = asin(this->get_e1()[2] / (sin(this->get_inc1())) / this->get_ecc1());
-			if((this->get_e1()^this->get_j1())[2] > 0) g1 = PI- g1;
+			if((this->get_e1()^this->get_j1())[2] > 0) g1 = PI - g1;
 			if(g1 < 0) g1 += TWOPI; // need to put the angle in the right quadrant
 			return g1;
 		}
+
 		void set_Omega1(double Omega1_i) {Omega1=Omega1_i;}
 		double get_Omega1() {
-     	 	//HBLIM: if orbital plane coincides with reference plane, set to 0
 			double norm_xy = sqrt(sqr(this->get_j1()[0]) + sqr(this->get_j1()[1]));
 			if(norm_xy == 0.)
 				return 0.;
-      		//HBLIM: LML Equation 22
 			else{
-        		//HBLIM: 1st, 2nd quadrants
 				if(this->get_j1()[0] >= 0)
 					return acos(-this->get_j1()[1] / norm_xy);
-        		//HBLIM: 3rd, 4th quadrants
 				else
 		        	return TWOPI - acos(-this->get_j1()[1] / norm_xy);
 			}
@@ -393,22 +288,6 @@ class kozai_struct
 		double get_ecc2() {return abs(this->get_e2());}
 
 		void set_g2(double g2_i) {g2=g2_i;}
-   //      double get_g2() {
-   //          double g2 = asin(this->get_e2()[2] / (sin(this->get_inc2())) / this->get_ecc2());
-   //          double arg = this->get_e2()[2] / (sin(this->get_inc2())) / this->get_ecc2();
-   //          //HBLIM: If inc2 = 0, then re-define g2 wrt to fixed X-direction! Otherwise definition diverges
-			// if(this->get_inc2() == 0.) { 
-			// 	g2 = acos(this->get_e2()[0] / this->get_ecc2()); 
-			// 	//cout << "inc2 = 0" << endl;
-			// }
-
-   //          if((this->get_e2()^this->get_j2())[2] > 0) g2 = PI- g2;
-   //          if(g2 < 0) g2 += TWOPI; // need to put the angle in the right quadrant
-
-   //          if(isnan(g2)) cout << "arg = " << arg << endl;
-   //          return g2;
-   //      }
-
 		double get_g2() {
 			double g2 = asin(this->get_e2()[2] / (sin(this->get_inc2())) / this->get_ecc2());
 			if((this->get_e2()^this->get_j2())[2] > 0) g2 = PI- g2;
@@ -522,8 +401,6 @@ class kozai_struct
 		}
 
 		// get the gravitational-wave frequency of the inner binary
-    	// HBLIM: Wen 2003 equation 36. 
-    	// HBLIM: Fits Peters Matthews peak frequency (which harmonic overtone of forb) as fuction of ecc
 		double gwave_freq() {
 			double ecc = this->get_ecc1();
 			double forb = this->get_forb();
@@ -548,12 +425,6 @@ class kozai_struct
 
 		void set_radiation(bool radiation_i) {radiation=radiation_i;}
 		bool get_radiation() {return radiation;}
-
-		void set_outer_pericenter(bool outerpericenter_i) {outerpericenter=outerpericenter_i;}
-		bool get_outer_pericenter() {return outerpericenter;}
-
-		void set_interaction_terms(bool interact_i) {interaction=interact_i;}
-		bool get_interaction_terms() {return interaction;}
 
 		//precomputed constants
 		//
@@ -581,19 +452,3 @@ class kozai_struct
 
 };
 
-//HBLIM: Interaction Terms
-double de1dt_NKLY(double m1,double m2,double m3, double a1, double a2, double inc1, double inc2, double g1, double g2, double e1, double e2);
-double de2dt_NKLY(double m1,double m2,double m3, double a1, double a2, double inc1, double inc2, double g1, double g2, double e1, double e2);
-double di1dt_NKLY(double m1,double m2,double m3, double a1, double a2, double inc1, double inc2, double g1, double g2, double e1, double e2);
-double di2dt_NKLY(double m1,double m2,double m3, double a1, double a2, double inc1, double inc2, double g1, double g2, double e1, double e2);
-double dh1dt_NKLY(double m1,double m2,double m3, double a1, double a2, double inc1, double inc2, double g1, double g2, double e1, double e2);
-double dh2dt_NKLY(double m1,double m2,double m3, double a1, double a2, double inc1, double inc2, double g1, double g2, double e1, double e2);
-double dg1dt_NKLY(double m1,double m2,double m3, double a1, double a2, double inc1, double inc2, double g1, double g2, double e1, double e2);
-double dg2dt_NKLY(double m1,double m2,double m3, double a1, double a2, double inc1, double inc2, double g1, double g2, double e1, double e2);
-vec de1dt_NKLY_vec(double m1,double m2,double m3, double a1, double a2, double inc1, double inc2, double g1, double g2, double e1, double e2,double omega1, double omega2);
-vec de2dt_NKLY_vec(double m1,double m2,double m3, double a1, double a2, double inc1, double inc2, double g1, double g2, double e1, double e2,double omega1, double omega2);
-vec dj1dt_NKLY_vec(double m1,double m2,double m3, double a1, double a2, double inc1, double inc2, double g1, double g2, double e1, double e2,double omega1, double omega2);
-vec dj2dt_NKLY_vec(double m1,double m2,double m3, double a1, double a2, double inc1, double inc2, double g1, double g2, double e1, double e2,double omega1, double omega2);
-
-double dg1dt_1PN(double m1,double m2,double m3, double a1, double a2, double inc1, double inc2, double g1, double g2, double e1, double e2);
-vec de1dt_1PN_vec(double m1,double m2,double m3, double a1, double a2, double inc1, double inc2, double g1, double g2, double e1, double e2,double omega1, double omega2);
