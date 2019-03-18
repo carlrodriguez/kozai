@@ -41,9 +41,7 @@ Parameters:\n\
 Flags:\n\
   --quad       Include quadrupole terms \n\
   --oct        Include octupole Terms\n\
-  --peri       Include pericenter precession (1pN) terms for inner binary\n\
-  --outerperi  Include pericenter precession (1pN) terms for outer binary\n\
-  --interact   Include post-Newtonian interactions terms between inner and outer binaries \n\
+  --peri       Include pericenter precession (1pN) terms\n\
   --spinorbit  Include spin-orbit (1.5pN) terms\n\
   --spinspin   Include spin-spin (2pN) terms\n\
   --rad        Include gravitational-wave emission (2.5pN)\n\
@@ -59,7 +57,6 @@ void print_state(double t_next, kozai_struct *kozai, ostream& stream = cerr){
 
 	stream << setprecision(14) << (t_next/YEAR) << "  " 
 		 << kozai->get_a1()/AU << "  " 
-		 << setprecision(ss) << "  "
 		<< kozai->get_ecc1() << "  "
 		<< setprecision(ss)
 		<< kozai->get_ecc2() << "  " 
@@ -78,9 +75,9 @@ void print_state(double t_next, kozai_struct *kozai, ostream& stream = cerr){
 
 int main(int argc, char **argv){
 
-	double eps_abs = 1.e-15;
-	double eps_rel = 1.e-15;
-	double h = 1.e-13;
+	double eps_abs = 1.e-12;
+	double eps_rel = 1.e-12;
+	double h = 1.e-10;
 	double tmin=0, tmax=3.2e8*YEAR, delta_t=1e5*YEAR;
 	bool collision=false;
 	bool failure=false;
@@ -94,12 +91,8 @@ int main(int argc, char **argv){
 
 
 	//First, initialize the Kozai structure
-	//HBLIM: endows with default values
 	kozai_struct *kozai = new kozai_struct;
-
-	//HBLIM: overwrites default values with specified arguments, if applicable
 	set_parameters(argc, argv, kozai, tmax, delta_t, IGNORE_GSL_ERRORS);
-	//HBLIM: constructs "VECTORIAL" quantities (which we evolve) from kozai data members (which are scalars)
 	kozai->initialize();
 
 	//Then, set up the GSL integrator (we're using an 8th-order Runge Kutta)
@@ -135,7 +128,6 @@ int main(int argc, char **argv){
 		}
 
 		//Then integrate the system forward for this timestep
-		//HBLIM: this modifies the kozai y parameters. safe since dimension is known and arrays a mutable
 		while (t < t_next){
 			status = gsl_odeiv2_evolve_apply (evolve_ptr, control_ptr, step_ptr,
                                     &my_system, &t, t_next, &h, kozai->get_y());
@@ -238,7 +230,7 @@ void print_header_and_initial_state(kozai_struct* kozai){
 	cerr << "#1:t[yr]  #2:a1[AU]  #3:e1  #4:e2  #5:inc[deg] #6:i1  #7:i2  #8:g1  #9:g2  #10:theta1  #11:theta2  #12:dPhi #13:Theta1 #14:Theta2 #15:SS" << endl;
 }
 
-//HBLIM: void parameters are required by GSL 
+
 int rhs(double t, const double y[], double f[], void *kozai_ptr){
 
 	kozai_struct *kozai = (kozai_struct *) kozai_ptr;
@@ -279,46 +271,20 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 	double j1u2 = j1*u2;
 	double e1n2 = e1*n2;
 	double e1u2 = e1*u2;
+
 	vec j1xn2 = j1^n2;
 	vec j1xu2 = j1^u2;
 	vec e1xn2 = e1^n2;
 	vec e1xu2 = e1^u2;
+
 	double L1L2 = L1 / L2;
 
-    // Method A
-	// HBLIM: Angles needed for 1PN Interaction Terms
-	double inc1val = kozai->get_inc1();
-	double inc2val = kozai->get_inc2();
-	double g1val = kozai->get_g1();
-	double g2val = kozai->get_g2();
-	double omega1val = kozai->get_Omega1();
-	double omega2val= kozai->get_Omega2(); 
-	
-	// Method B
-	double j1j2 = j1*j2;
-	double j1e2 = j1*e2;
-	double e1j2 = e1*j2;
-	double e1e2 = e1*e2;
-	vec j1xj2 = j1^j2;
-	vec j1xe2 = j1^e2;
-	vec e1xj2 = e1^j2;
-	vec e1xe2 = e1^e2;
-	vec j1xe1 = j1^e1;
-    vec j2xe2 = j2^e2;
-
-	double fme1 = (2.-5.*sqr(e1n))*(sqr(m1)+sqr(m2)) - 3.*(2.-sqr(e1n))*m1*m2;
-
-	//Compute the (local) quadrupole timescale (equation 21 Liu Munoz Lai)
+	//Compute the (local) quadrupole timescale
 	double tsec = (sqrt((m1+m2)/(G*pow(a1,3.)))*pow(a2,3.)*pow(1.-sqr(e2n),1.5) /m3);
 
-	vec dj1dt=0., de1dt=0., dj2dt=0., de2dt=0., ds1dt, ds2dt;
+	vec dj1dt, de1dt=0., dj2dt, de2dt=0., ds1dt, ds2dt;
 	double dadt  = 0;
 
-    // cout << "(t,inc1,inc2,g1,g2,e1,e1z,e2,omega1,omega2) = (" << t/YEAR << ", " << inc1val << ", " << inc2val << ", " << g1val << ", " << g2val << ", " << e1n << ", " <<  e1[2] << ", " << e2n << ", " << omega1val << ", " << omega2val << ")" << endl;
-
-    // Print out magnitude of (de/dt) for each term
-    // double printdedt = 0.0;
-    cout << t / YEAR << "\t";
 	//Add the quadrupole-order secular evolution equations
 	if(kozai->get_quadrupole()){
 		double quad_coef = 0.75 / tsec;
@@ -327,13 +293,10 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 		dj2dt += quad_coef*L1L2*((-j1n2*j1xn2) + (5*e1n2*e1xn2));
 		de2dt += quad_coef*(L1L2/j2n)*((j1n2*(e2^j1)) - (5.*e1n2*(e2^e1)) 
 			   - ((0.5 - 3.*sqr(e1n) + 12.5*sqr(e1n2) - 2.5*sqr(j1n2))*(n2^e2)));
-        // printdedt = abs(quad_coef*((j1n2*e1xn2) + (2.*(j1^e1)) - (5.*(e1n2*j1xn2))));
-        // cout << printdedt << "\t";
 	}
 
 	//Add the octupole-order secular evolution equations
 	if(kozai->get_octupole() == true){
-		// equation 10 Liu Munoz Lai
 		double octo_coef = 1.171875*((m1-m2)/(m1+m2)*(a1/a2)*(e2n/sqr(j2n)))/tsec;
 		dj1dt += octo_coef*((((2.*(e1u2*j1n2+e1n2*j1u2)*j1)
 				+ 2.*(j1u2*j1n2-7.*e1u2*e1n2)*e1)^n2) + ((((2.*e1n2*j1n2)*j1)
@@ -349,26 +312,11 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 				- ((14.*e1n2*(e1*e2))*u2) + (sqr(j2n)/e2n)*((1.6*sqr(e1n) - 0.2 - 7.*sqr(e1n2)
 				+ sqr(j1n2))*n2))^e1) - (((2.*(0.2-1.6*sqr(e1n))*e1u2*e2) + ((14.*e1n2*j1u2*j1n2)*e2)
 				+ (7.*e1u2*(1.6*sqr(e1n) - 0.2 - 7.*sqr(e1n2) + sqr(j1n2))*e2))^n2));
-        // printdedt = abs(octo_coef*(((((2.*e1n2*j1n2)*e1) + (1.6*sqr(e1n) - 0.2 - 7.*sqr(e1n2) + sqr(j1n2))*j1)^u2) + (((2.*(e1u2*j1n2+e1n2*j1u2)*e1) + (2.*(j1n2*j1u2-7*e1n2*e1u2)*j1))^n2) + (3.2*e1u2*(j1^e1))));
-        // cout << printdedt << "\t";
-
 	}
 
 	//Add the pericenter precession of the inner binary
-	if (kozai->get_pericenter() == true) {
+	if (kozai->get_pericenter() == true)
 		de1dt += (3./(c*c*a1*sqr(j1n)))*(pow(G*(m1+m2)/a1, 1.5) * (n1^e1));
-		//de1dt += de1dt_1PN_vec(m1,m2,m3,a1,a2,inc1,inc2,g1,g2,e1n,e2n,omega1,omega2);
-        // cout << "inner peri = " << abs((3./(c*c*a1*sqr(j1n)))*(pow(G*(m1+m2)/a1, 1.5) * (n1^e1))) << endl;
-        // printdedt = abs((3./(c*c*a1*sqr(j1n)))*(pow(G*(m1+m2)/a1, 1.5) * (n1^e1)));
-        // cout << printdedt << "\t";
-	}
-	//HBLIM: Add the pericenter precession of the outer binary
-	if (kozai->get_outer_pericenter() == true) {
-		de2dt += (3./(c*c*a2*sqr(j2n)))*(pow(G*(m1+m2+m3)/a2, 1.5) * (n2^e2));   
-		// cout << "outer peri = " << (3./(c*c*a2*sqr(j2n)))*(pow(G*(m1+m2+m3)/a2, 1.5) * (n2^e2)) << endl;
-	    // cout << "de2dt_1PN ~ " << abs((3./(c*c*a2*sqr(j2n)))*(pow(G*(m1+m2+m3)/a2, 1.5) * (n2^e2))) << endl;
-	}
-
 
 	//Add spin-orbit coupling for the inner binary 
 	if (kozai->get_spinorbit() == true){
@@ -408,40 +356,8 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 
 		de1dt += dedt * u1;
 		dj1dt += (-e1n / j1n) * dedt * n1;
-        // printdedt = abs(dedt * u1);
-        // cout << printdedt << "\t";
 	}
 
-	//HBLIM: Add the 1PN interaction terms
-	if(kozai->get_interaction_terms() == true){
-
-		// Method A
-		// de1dt += de1dt_NKLY_vec(m1,m2,m3,a1,a2,inc1val,inc2val,g1val,g2val,e1n,e2n,omega1val,omega2val);
-		// Method B
-		double C1 = G*L1*L2*(8.*(m1+m2)+6.*m3) / (4.*pow(a2,3.)*pow(c,2.)*(m1+m2));
-		double C2 = pow(G,2.)*a1*m1*m2*m3 / (32.*pow(m1+m2,2.)*pow(a2,3.)*pow(c,2.));
-		double C3 = -3.*C2;
-		double C4 = 9*(pow(m1,2.)+(m1*m2)+pow(m2,2.))*C2;
-
-		dj1dt += -(1./L1) * ( C1*((j1xj2)/pow(j2n,3.)) + C3*(2.*fme1*(j1j2)*(j1xj2)/(pow(j1n,2.)*pow(j2n,5.))) + C4*(-2.*sqr(e1n)*(j1j2)*(j1xj2)/(pow(j1n,2.)*pow(j2n,5.)))) 
-                 -(1./L1) * ( C4*(-4.*(e1j2)*(e1xj2)/pow(j2n,5.)));
-
-        de1dt += -(1./L1) * ( C4*(-4.*(e1j2)*(j1xj2)/pow(j2n,5.)) )
-                 -(1./L1) * ( C1*((e1xj2)/pow(j2n,3.)) + C3*(2.*fme1*(j1j2)*(e1xj2)/(pow(j1n,2.)*pow(j2n,5.))) + C4*(-2.*sqr(e1n)*(j1j2)*(e1xj2)/(pow(j1n,2.)*pow(j2n,5.))));
-
-        dj2dt += -(1./L2) * ( C1*((-j1xj2)/pow(j2n,3.)) + C3*(2.*fme1*(j1j2)*(-j1xj2)/(pow(j1n,2.)*pow(j2n,5.))) + C4*(-2.*sqr(e1n)*(j1j2)*(-j1xj2)/(pow(j1n,2.)*pow(j2n,5.)))
-                            + C4*(-4.*(e1j2)*(-j1xj2)/pow(j2n,5.)));
-
-        de2dt += -(1./L2) * ( C1*((-j1xe2)/pow(j2n,3.)) + C3*(2.*fme1*(j1j2)*(-j1xe2)/(pow(j1n,2.)*pow(j2n,5.))) + C4*(-2.*sqr(e1n)*(j1j2)*(-j1xe2)/(pow(j1n,2.)*pow(j2n,5.)))
-                            + C4*(-4.*(e1j2)*(-e1xe2)/pow(j2n,5.)));
-
-        // cout << "interact = " << abs(-(1./L1) * ( C2*((6.*m1*m2-10.*(sqr(m1)+sqr(m2)))*(j1xe1)/pow(j2n,3.)) + C3*(-6.*(sqr(m1)+m1*m2+sqr(m2))*sqr(j1j2)*(j1xe1)/(pow(j1n,4.)*pow(j2n,5.)))
-        //                     + C4*(2.*(j1xe1)/pow(j2n,3.)) + C4*(-2.*(j1j2)*(j1xe1)/(pow(j1n,4.)*pow(j2n,5.))) - C4*(-4.*(e1j2)*(j1xj2)/pow(j2n,5.)) )
-        //          -(1./L1) * ( C1*((e1xj2)/pow(j2n,3.)) + C3*(2.*fme1*(j1j2)*(e1xj2)/(pow(j1n,2.)*pow(j2n,5.))) + C4*(-2.*sqr(e1n)*(j1j2)*(e1xj2)/(pow(j1n,2.)*pow(j2n,5.))))) << endl;
-
-	}
-
-    cout << endl;
 	//Finally, copy the derivatives into the output array
 	for(int i=0; i<3; i++){
 		f[i] = dj1dt[i];
@@ -486,7 +402,6 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 
 	const struct option longopts[] =
 	{
-		//HBLIM: {long option name, option takes in a required argument?, has a separate flag?, short option name}
 		{"m1",    1,  0, 'm'},
 		{"m2",    1,  0, 'M'},
 		{"m3",    1,  0, 'n'},
@@ -499,8 +414,8 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		{"omega1",1,  0, 'l'},
 		{"omega2",1,  0, 'L'},
 		{"inc"   ,1,  0, 'i'},
-		{"rad1"   ,1,  0, 'r'}, // THIS IS A BUG...
-		{"rad2"   ,1,  0, 'R'},
+		{"rad1"   ,1,  0, 'c'},
+		{"rad2"   ,1,  0, 'C'},
 		{"chi1"   ,1,  0, 'c'},
 		{"chi2"   ,1,  0, 'C'},
 		{"theta1"   ,1,  0, 't'},
@@ -510,8 +425,6 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		{"quad"  ,0,  0, 'q'},
 		{"oct"   ,0,  0, 'o'},
 		{"peri"  ,0,  0, 'p'},
-		{"outerperi", 0, 0, 'z'},
-		{"interact", 0, 0, 'Z'},
 		{"spinorbit"  ,0,  0, 's'},
 		{"spinspin"   ,0,  0, 'S'},
 		{"rad"   ,0,  0, 'r'},
@@ -522,10 +435,8 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		{0,0,0,0},
 	};
 
-    //HBLIM: ":" after argument means that the option takes a required argument
-    //"m1" needs to have a specified arguent, but "quad" doesn't need an argument
 	while ((c = getopt_long (argc, argv, 
-					"m:M:n:a:A:e:E:g:G:l:L:i:r:R:c:C:t:T:u:U:qopzZsSrId:D:b:B:h",
+					"m:M:n:a:A:e:E:g:G:l:L:i:c:C:t:T:u:U:qopsSrId:D:b:B:h",
 					longopts,&option_index)) != -1)
 	switch (c)
     {
@@ -575,10 +486,6 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		  kozai->set_octupole(true); break;
 		case 'p':
 		  kozai->set_pericenter(true); break;
-		case 'z':
-		  kozai->set_outer_pericenter(true); break;
- 		case 'Z':
-		  kozai->set_interaction_terms(true); break;
 		case 's':
 		  kozai->set_spinorbit(true); break;
 		case 'S':
